@@ -69,6 +69,9 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = 'DEV' in os.environ
 
 ALLOWED_HOSTS = ['8000-leverh-reactappbooks-8rwwug9h4d0.ws-eu104.gitpod.io',
+                 'localhost',
+                 '127.0.0.1',
+                 'book-hub-bfb515c0f71e.herokuapp.com',
                  os.environ.get('ALLOWED_HOST'),
                 ]
 
