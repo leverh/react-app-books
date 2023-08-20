@@ -10,11 +10,26 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 
+import re
 from pathlib import Path
 import os
+import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+if os.path.exists('env.py'):
+    import env
+
+
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+CLOUDINARY_STORAGE = {
+    'CLOUDINARY_URL': os.environ.get('CLOUDINARY_URL')
+}
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
+
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -31,32 +46,31 @@ if 'DEV' not in os.environ:
 
 REST_USE_JWT = True
 
-JWT_AUTH_COOKIE = 'bookhub-auth'  # Changed 'my-app-auth' to 'bookhub-auth'
+JWT_AUTH_COOKIE = 'bookhub-auth'  
 
 JWT_AUTH_SECURE = True
 
-JWT_AUTH_REFRESH_COOKIE = 'bookhub-refresh-token'  # Changed 'my-refresh-token' to 'bookhub-refresh-token'
+JWT_AUTH_REFRESH_COOKIE = 'bookhub-refresh-token' 
 
 JWT_AUTH_SAMESITE = 'None'
 
-# Adjusting the path to the serializer based on your app's name.
-# I assume that you have a serializer named 'CurrentUserSerializer' in the 'serializers.py' of your main app.
 REST_AUTH_SERIALIZERS = {
     'USER_DETAILS_SERIALIZER': 'bookhub.serializers.CurrentUserSerializer'
 }
-
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-pqrm6$v$%=my$&2cp)q!pyorux%l6u2!m^d*_@pke=ns#cd#t6'
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = 'DEV' in os.environ
 
-ALLOWED_HOSTS = ['8000-leverh-reactappbooks-8rwwug9h4d0.ws-eu104.gitpod.io']
+ALLOWED_HOSTS = ['8000-leverh-reactappbooks-8rwwug9h4d0.ws-eu104.gitpod.io',
+                 os.environ.get('ALLOWED_HOST'),
+                ]
 
 
 # Application definition
@@ -70,6 +84,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework.authtoken',
     'django.contrib.humanize',
+    'cloudinary',
+    'corsheaders',
 
     'bookhub',
     'books',
@@ -88,7 +104,16 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
+
+if 'CLIENT_ORIGIN_DEV' in os.environ:
+    extracted_url = re.match(r'^.+-', os.environ.get('CLIENT_ORIGIN_DEV', ''), re.IGNORECASE).group(0)
+    CORS_ALLOWED_ORIGIN_REGEXES = [
+        rf"{extracted_url}(eu|us)\d+\w\.gitpod\.io$",
+    ]
+
+CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = 'bookhub.urls'
 
@@ -114,12 +139,21 @@ WSGI_APPLICATION = 'bookhub.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+if 'DEV' in os.environ:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
+else:
+    database_url = os.environ.get("DATABASE_URL")
+    if database_url:
+        DATABASES = {
+            'default': dj_database_url.parse(database_url)
+        }
+    else:
+        raise ImproperlyConfigured("DATABASE_URL environment variable is not set.")
 
 
 # Password validation
