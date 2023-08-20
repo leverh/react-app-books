@@ -1,3 +1,7 @@
-from django.shortcuts import render
+from rest_framework import generics
+from .models import Favorite
+from .serializers import FavoriteSerializer
 
-# Create your views here.
+class FavoriteListCreateView(generics.ListCreateAPIView):
+    queryset = Favorite.objects.all()
+    serializer_class = FavoriteSerializer
